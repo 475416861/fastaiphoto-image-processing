@@ -217,6 +217,31 @@ def denoise_image(image: np.ndarray, ksize: int = 3) -> np.ndarray:
     return cv2.medianBlur(image, ksize)
 
 
+def auto_orient(image: np.ndarray, orientation: str = "landscape") -> np.ndarray:
+    """Rotate the image by 90 degrees if its orientation does not match the desired one.
+
+    Some scanned pages may be oriented incorrectly (e.g., portrait when you expect
+    landscape or vice versa).  This helper checks the aspect ratio of the image
+    and rotates by 90 degrees clockwise when necessary.  The default target
+    orientation is ``landscape`` (width greater than height), but you can pass
+    ``portrait`` to enforce the opposite.
+
+    Args:
+        image: Input image (BGR).
+        orientation: Target orientation: either ``landscape`` or ``portrait``.
+
+    Returns:
+        Rotated image if rotation is needed; otherwise the original image.
+    """
+    h, w = image.shape[:2]
+    if orientation == "landscape" and h > w:
+        # Rotate 90° clockwise to make width > height
+        return cv2.rotate(image, cv2.ROTATE_90_CLOCKWISE)
+    if orientation == "portrait" and w > h:
+        return cv2.rotate(image, cv2.ROTATE_90_CLOCKWISE)
+    return image
+
+
 def process_image(image: np.ndarray, args: argparse.Namespace) -> np.ndarray:
     """Process a single image according to command line options.
 
@@ -231,6 +256,10 @@ def process_image(image: np.ndarray, args: argparse.Namespace) -> np.ndarray:
         The processed image.
     """
     processed = image.copy()
+    # Optionally rotate the image to the desired orientation before other
+    # operations.  This is useful when scans are accidentally rotated 90°.
+    if getattr(args, 'auto_orient', None):
+        processed = auto_orient(processed, orientation=args.auto_orient)
     if args.deskew:
         processed, angle = deskew_image(processed)
         if args.verbose:
@@ -281,6 +310,7 @@ def build_argparser() -> argparse.ArgumentParser:
     parser.add_argument('--border-threshold', type=int, default=10, help='Intensity threshold for border removal')
     parser.add_argument('--denoise', action='store_true', help='Apply median filter for denoising')
     parser.add_argument('--denoise-ksize', type=int, default=3, help='Kernel size for median filtering (odd)')
+    parser.add_argument('--auto-orient', choices=['landscape', 'portrait'], help='Automatically rotate images to the specified orientation (landscape or portrait)')
     parser.add_argument('--verbose', action='store_true', help='Print progress information')
     return parser
 
