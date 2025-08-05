@@ -83,10 +83,12 @@ def deskew_image(image: np.ndarray) -> Tuple[np.ndarray, float]:
         A tuple (rotated, angle) where `rotated` is the deskewed
         image and `angle` is the rotation angle in degrees.
     """
+    # Convert to grayscale and invert so text becomes white on black background
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    # Otsu threshold to separate text from background
-    blur = cv2.GaussianBlur(gray, (5, 5), 0)
-    _, binary = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    inv = cv2.bitwise_not(gray)
+    # Apply Otsu's threshold to binarize the inverted image
+    _, binary = cv2.threshold(inv, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    # Extract coordinates of all non-zero pixels (foreground)
     coords = np.column_stack(np.where(binary > 0))
     if coords.size == 0:
         # Nothing detected, return original image
@@ -94,10 +96,15 @@ def deskew_image(image: np.ndarray) -> Tuple[np.ndarray, float]:
     rect = cv2.minAreaRect(coords)
     angle = rect[-1]
     # The angle returned by minAreaRect is in the range [-90, 0);
-    # adjust it such that the text appears upright.
+    # adjust it to ensure a proper rotation direction.  Follow the
+    # convention used by PyImageSearch: if the angle is less than -45
+    # degrees, add 90 and negate; otherwise simply negate it.  This
+    # produces a positive rotation angle (clockwise) that deskews the text.
     if angle < -45:
-        angle = 90 + angle
-    # rotate clockwise to deskew
+        angle = -(90 + angle)
+    else:
+        angle = -angle
+    # Rotate the image around its center to correct skew
     (h, w) = image.shape[:2]
     center = (w // 2, h // 2)
     M = cv2.getRotationMatrix2D(center, angle, 1.0)
