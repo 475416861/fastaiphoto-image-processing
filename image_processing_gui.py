@@ -26,20 +26,49 @@ import os
 import threading
 from functools import partial
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import (
-    QApplication,
-    QWidget,
-    QVBoxLayout,
-    QHBoxLayout,
-    QLabel,
-    QLineEdit,
-    QPushButton,
-    QCheckBox,
-    QFileDialog,
-    QTextEdit,
-    QMessageBox,
-)
+"""
+Try to import Qt classes from PyQt5.  If PyQt5 is not available,
+fall back to PySide2.  Both bindings provide nearly identical APIs
+for the widgets used in this script.  The ``Qt`` module and widget
+classes (QApplication, QWidget, QVBoxLayout, etc.) are imported
+in a unified way to facilitate compatibility across environments.
+
+If neither binding is installed, running this script will raise an
+ImportError.  To install PyQt5 use ``pip install pyqt5``.  For PySide2
+use ``pip install PySide2``.
+"""
+try:
+    # Prefer PyQt5 if available
+    from PyQt5.QtCore import Qt  # type: ignore
+    from PyQt5.QtWidgets import (  # type: ignore
+        QApplication,
+        QWidget,
+        QVBoxLayout,
+        QHBoxLayout,
+        QLabel,
+        QLineEdit,
+        QPushButton,
+        QCheckBox,
+        QFileDialog,
+        QTextEdit,
+        QMessageBox,
+    )
+except ImportError:
+    # Fall back to PySide2
+    from PySide2.QtCore import Qt  # type: ignore
+    from PySide2.QtWidgets import (  # type: ignore
+        QApplication,
+        QWidget,
+        QVBoxLayout,
+        QHBoxLayout,
+        QLabel,
+        QLineEdit,
+        QPushButton,
+        QCheckBox,
+        QFileDialog,
+        QTextEdit,
+        QMessageBox,
+    )
 
 import image_processing as ip
 
