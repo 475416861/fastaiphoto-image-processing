@@ -116,10 +116,13 @@ class ImageProcessingGUI(QWidget):
         self.cb_crop = QCheckBox("裁剪")
         self.cb_remove_borders = QCheckBox("去边")
         self.cb_denoise = QCheckBox("去噪")
+        # New option: automatically rotate 90° to landscape orientation
+        self.cb_auto_orient = QCheckBox("自动旋转到横向")
         options_layout.addWidget(self.cb_deskew)
         options_layout.addWidget(self.cb_crop)
         options_layout.addWidget(self.cb_remove_borders)
         options_layout.addWidget(self.cb_denoise)
+        options_layout.addWidget(self.cb_auto_orient)
         layout.addLayout(options_layout)
 
         # Run button
@@ -169,6 +172,8 @@ class ImageProcessingGUI(QWidget):
         args.crop = self.cb_crop.isChecked()
         args.remove_borders = self.cb_remove_borders.isChecked()
         args.denoise = self.cb_denoise.isChecked()
+        # If auto orient is checked, set desired orientation to landscape
+        args.auto_orient = 'landscape' if self.cb_auto_orient.isChecked() else None
         args.verbose = True
         args.border_threshold = 10
         args.crop_margin = 0
