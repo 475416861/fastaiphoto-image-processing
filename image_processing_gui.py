@@ -78,7 +78,8 @@ class ImageProcessingGUI(QWidget):
 
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("Intelligent Image Processing")
+        # Set the window title to Chinese for localization
+        self.setWindowTitle("智能图像处理")
         self.init_ui()
 
     def init_ui(self) -> None:
@@ -86,9 +87,10 @@ class ImageProcessingGUI(QWidget):
 
         # Input directory selection
         input_layout = QHBoxLayout()
-        input_label = QLabel("Input directory:")
+        # Chinese label for input directory
+        input_label = QLabel("输入目录：")
         self.input_edit = QLineEdit()
-        browse_input_btn = QPushButton("Browse…")
+        browse_input_btn = QPushButton("浏览…")
         browse_input_btn.clicked.connect(self.browse_input)
         input_layout.addWidget(input_label)
         input_layout.addWidget(self.input_edit)
@@ -97,9 +99,10 @@ class ImageProcessingGUI(QWidget):
 
         # Output directory selection
         output_layout = QHBoxLayout()
-        output_label = QLabel("Output directory:")
+        # Chinese label for output directory
+        output_label = QLabel("输出目录：")
         self.output_edit = QLineEdit()
-        browse_output_btn = QPushButton("Browse…")
+        browse_output_btn = QPushButton("浏览…")
         browse_output_btn.clicked.connect(self.browse_output)
         output_layout.addWidget(output_label)
         output_layout.addWidget(self.output_edit)
@@ -108,10 +111,11 @@ class ImageProcessingGUI(QWidget):
 
         # Options checkboxes
         options_layout = QHBoxLayout()
-        self.cb_deskew = QCheckBox("Deskew")
-        self.cb_crop = QCheckBox("Crop")
-        self.cb_remove_borders = QCheckBox("Remove borders")
-        self.cb_denoise = QCheckBox("Denoise")
+        # Chinese labels for processing options
+        self.cb_deskew = QCheckBox("自动纠斜")
+        self.cb_crop = QCheckBox("裁剪")
+        self.cb_remove_borders = QCheckBox("去边")
+        self.cb_denoise = QCheckBox("去噪")
         options_layout.addWidget(self.cb_deskew)
         options_layout.addWidget(self.cb_crop)
         options_layout.addWidget(self.cb_remove_borders)
@@ -119,7 +123,8 @@ class ImageProcessingGUI(QWidget):
         layout.addLayout(options_layout)
 
         # Run button
-        run_btn = QPushButton("Run")
+        # Chinese label for the run button
+        run_btn = QPushButton("运行")
         run_btn.clicked.connect(self.run_processing)
         layout.addWidget(run_btn)
 
@@ -149,10 +154,10 @@ class ImageProcessingGUI(QWidget):
         input_dir = self.input_edit.text().strip()
         output_dir = self.output_edit.text().strip()
         if not input_dir or not os.path.isdir(input_dir):
-            QMessageBox.warning(self, "Error", "Please select a valid input directory.")
+            QMessageBox.warning(self, "错误", "请选择有效的输入目录。")
             return
         if not output_dir:
-            QMessageBox.warning(self, "Error", "Please select a valid output directory.")
+            QMessageBox.warning(self, "错误", "请选择有效的输出目录。")
             return
         os.makedirs(output_dir, exist_ok=True)
 
@@ -183,15 +188,19 @@ class ImageProcessingGUI(QWidget):
         for i, filename in enumerate(files, 1):
             input_path = os.path.join(input_dir, filename)
             output_path = os.path.join(output_dir, filename)
-            self.append_log(f"[{i}/{total}] Processing {filename}…")
+            # Chinese log message for processing start
+            self.append_log(f"[{i}/{total}] 正在处理 {filename} …")
             try:
                 image = ip.load_image(input_path)
                 processed = ip.process_image(image, args)
                 ip.save_image(output_path, processed)
-                self.append_log(f"Saved to {output_path}\n")
+                # Chinese log message for save success
+                self.append_log(f"已保存到 {output_path}\n")
             except Exception as e:
-                self.append_log(f"Error processing {filename}: {e}\n")
-        self.append_log("Processing complete.")
+                # Chinese log message for errors
+                self.append_log(f"处理 {filename} 时出错：{e}\n")
+        # Chinese completion message
+        self.append_log("处理完成。")
 
 
 def main() -> None:
