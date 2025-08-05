@@ -113,26 +113,38 @@ def deskew_image(image: np.ndarray) -> Tuple[np.ndarray, float]:
 
 
 def crop_foreground(image: np.ndarray, margin: int = 0) -> np.ndarray:
-    """Crop the image to the bounding box of its foreground region.
+    """Crop the image to the bounding box of its largest foreground contour.
 
-    This function threshold the image to binary and finds the smallest
-    rectangle that contains all non-background pixels.  It then crops
-    the image to that rectangle, optionally adding a margin.  This is
-    useful to remove blank space around documents.
+    Many scanned images contain both dark and light borders depending on
+    the scanner bed.  A simple threshold and bounding rectangle can
+    fail on light backgrounds.  This implementation converts the
+    image to grayscale, applies Otsu thresholding and finds the
+    largest external contour.  The resulting bounding box is used to
+    crop the image, optionally expanding by a margin.  This technique
+    is inspired by open‑source tools that trim and deskew photos using
+    Canny edges and contours (e.g. the trimpictures project)【57333697039207†L61-L104】.
 
     Args:
         image: Input image (BGR).
         margin: Extra pixels to include around the detected bounding box.
 
     Returns:
-        Cropped image.
+        Cropped image. If no contour is found, the original image is returned.
     """
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    # Apply Otsu threshold to separate foreground from background.  We use
+    # binary inversion so that dark text on light backgrounds becomes
+    # foreground.  For dark backgrounds (white text), Otsu still
+    # generates a reasonable separation.
     _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
-    coords = cv2.findNonZero(thresh)
-    if coords is None:
+    # Find external contours of the thresholded image
+    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if not contours:
         return image.copy()
-    x, y, w, h = cv2.boundingRect(coords)
+    # Choose the largest contour by area; this should correspond to the
+    # document region.  Smaller contours are likely noise or specks.
+    largest = max(contours, key=cv2.contourArea)
+    x, y, w, h = cv2.boundingRect(largest)
     # Apply margin and clamp to image bounds
     x_start = max(x - margin, 0)
     y_start = max(y - margin, 0)
@@ -142,33 +154,53 @@ def crop_foreground(image: np.ndarray, margin: int = 0) -> np.ndarray:
 
 
 def remove_black_borders(image: np.ndarray, threshold: int = 10) -> np.ndarray:
-    """Remove near-black borders from the image.
+    """Remove dark or light borders from the image.
 
-    The function computes the sum of pixel intensities along each edge
-    and crops away rows/columns where the average intensity is below
-    the given threshold.  This can remove scanner-induced black edges.
+    Scanned documents can have very dark borders (near 0 intensity) or
+    very light borders (near 255 intensity) depending on the scanner
+    background.  This function scans from each edge inward and crops
+    away rows and columns whose average intensity is within a band of
+    "background" values.  The default threshold of 10 means that
+    values below 10 are considered black and values above 245 (255 - 10)
+    are considered white borders【251769692126785†L0-L55】.
 
     Args:
         image: Input image (BGR).
-        threshold: Pixel intensity threshold used to detect black rows/cols.
+        threshold: Intensity threshold for determining border pixels.  Values
+            within [0, threshold] or [255 - threshold, 255] are treated as
+            background.
 
     Returns:
-        Cropped image without black borders.
+        Cropped image without detected borders.
     """
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     h, w = gray.shape
+    min_thresh = threshold
+    max_thresh = 255 - threshold
+    # Scan from the top until a row has a mean intensity outside the background
     top = 0
-    while top < h and np.mean(gray[top, :]) < threshold:
+    while top < h and (np.mean(gray[top, :]) <= min_thresh or np.mean(gray[top, :]) >= max_thresh):
         top += 1
+    # Scan from the bottom
     bottom = h - 1
-    while bottom > top and np.mean(gray[bottom, :]) < threshold:
+    while bottom > top and (np.mean(gray[bottom, :]) <= min_thresh or np.mean(gray[bottom, :]) >= max_thresh):
         bottom -= 1
+    # Scan from the left
     left = 0
-    while left < w and np.mean(gray[:, left]) < threshold:
+    while left < w and (np.mean(gray[:, left]) <= min_thresh or np.mean(gray[:, left]) >= max_thresh):
         left += 1
+    # Scan from the right
     right = w - 1
-    while right > left and np.mean(gray[:, right]) < threshold:
+    while right > left and (np.mean(gray[:, right]) <= min_thresh or np.mean(gray[:, right]) >= max_thresh):
         right -= 1
+    # Clamp values to ensure we don't exceed bounds
+    top = max(top, 0)
+    bottom = min(bottom, h - 1)
+    left = max(left, 0)
+    right = min(right, w - 1)
+    # Avoid negative or zero dimensions
+    if right <= left or bottom <= top:
+        return image.copy()
     return image[top:bottom + 1, left:right + 1]
 
 
